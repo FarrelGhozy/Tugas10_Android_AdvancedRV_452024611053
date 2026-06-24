@@ -1,156 +1,135 @@
-# 🎯 Advanced RecyclerView — Tugas 10
+# Advanced RecyclerView - Tugas 10
 
-**Mata Kuliah:** Pemrograman Perangkat Bergerak  
-**Topik:** Advanced RecyclerView Use Cases (ListAdapter, DiffUtil, Multiple View Types, GridLayout, Custom BindingAdapter)
-
----
-
-## 📋 Identitas
-
-| | |
-|---|---|
-| **Nama** | Farrel Ghozy Affifudin |
-| **NIM** | 452024611053 |
-| **Prodi** | Teknik Informatika — UNIDA Gontor |
+**Mata Kuliah:** Pemrograman Perangkat Bergerak
 
 ---
 
-## 🖼️ Screenshot Aplikasi
+## Identitas
 
-### Tampilan Grid Awal (Multiple View Types)
+**Nama:** Farrel Ghozy Affifudin
+**NIM:** 452024611053
+**Prodi:** Teknik Informatika - UNIDA Gontor
+
+---
+
+## Screenshot
+
+**Tampilan Grid (Multiple View Types)**
 
 ![Grid View](screenshots/tugas10_grid.png)
 
-Daftar data dalam bentuk **Grid 3 kolom** dengan perbedaan tampilan antar-item:
-- **Header** — lebar penuh (span=3), background gelap, judul section
-- **Number Item** — 1 kolom, menampilkan data populasi dengan format angka (B/M/K)
-- **Color Item** — 1 kolom, background warna dengan hex code, menggunakan custom `@BindingAdapter`
+ Jadi disini bisa diliat ada 3 jenis tampilan item yang berbeda. Header span nya 3 jadi full satu baris, terus item number sama color masing-masing 1 kolom doang.
 
-### Setelah Pembaruan Data (Update Data)
+**Setelah Update Data**
 
 ![After Update](screenshots/tugas10_updated.png)
 
-Data diperbarui dengan nilai populasi baru — **ListAdapter + DiffUtil** hanya me-render ulang item yang berubah, bukan seluruh list.
+Ini pas gw pencet tombol Update Data, angka populasinya nambah random. Yang keupdate cuma item-item yang berubah aja, yang lain diem. Makanya pake ListAdapter tuh enak, gak perlu render ulang semua.
 
-### Setelah Pengacakan (Shuffle)
+**Setelah Di-shuffle**
 
 ![After Shuffle](screenshots/tugas10_shuffle.png)
 
-Item diacak posisinya tanpa memindahkan Header — **DiffUtil** mendeteksi pergerakan dan hanya menganimasikan item yang berpindah.
+Tombol Shuffle ngacak urutan item tapi Headernya tetep di tempat. DiffUtil otomatis deteksi pergerakan dan cuma animasi item yang pindah doang, mantep.
 
 ---
 
-## ⚙️ Fitur yang Diimplementasikan
+## Fitur yang Dibikin
 
-### 1. ListAdapter + DiffUtil ✅ (Skor 4/4)
-- **Base class:** `ListAdapter<DisplayItem, RecyclerView.ViewHolder>`
-- **DiffUtil.ItemCallback** dengan implementasi:
-  - `areItemsTheSame()` — perbandingan berdasarkan `id` unik
-  - `areContentsTheSame()` — perbandingan menggunakan data class equality (semua properti)
-- Perubahan data dikomputasi di **background thread** secara otomatis
-- Tidak ada `notifyDataSetChanged()` — ListAdapter menghitung minimal perubahan secara internal
+### 1. ListAdapter + DiffUtil
 
-### 2. Multiple View Types ✅ (Skor 4/4)
-- **Tiga jenis layout:** `HEADER`, `NUMBER_ITEM`, `COLOR_ITEM`
-- `getItemViewType()` dioverride untuk mengembalikan tipe berdasarkan data
-- Masing-masing ViewHolder menangani layout spesifik
+Biasanya kalo pake RecyclerView.Adapter biasa, tiap kali data berubah kita harus panggil `notifyDataSetChanged()` yang nge-render ulang SEMUA item dari awal. Boros banget apalagi kalo datanya banyak.
 
-### 3. GridLayoutManager + SpanSizeLookup ✅ (Skor 4/4)
-- **Grid 3 kolom** menggunakan `GridLayoutManager`
-- `SpanSizeLookup` dinamis:
-  - **HEADER** → span = 3 (lebar penuh)
-  - **NUMBER_ITEM** → span = 1
-  - **COLOR_ITEM** → span = 1
+Nah disini gw pake `ListAdapter` yang nerima `DiffUtil.ItemCallback`. Jadi pas data di-update, DiffUtil bakal ngebandingin item-item lama sama baru di background thread, terus cuma item yang beneran berubah aja yang di-render ulang. Implementasi callbacknya:
 
-### 4. Custom BindingAdapter ✅ (Skor 4/4)
-- **`backgroundColorHex`** — mengubah background ColorItem dari string hex langsung di XML
-- **`formattedNumber`** — memformat angka besar (1.5M, 8.1B, 281K) di NumberItem dari XML
+- `areItemsTheSame()` - ngecek pake `id`, kalo id nya sama berarti item itu sama cuma mungkin isinya berubah
+- `areContentsTheSame()` - ngecek pake equals data class, kalo semua properti sama ya gak usah di-render ulang
 
-### 5. Clean ViewHolder ✅ (Skor 4/4)
-- **Constructor private** — mencegah instansiasi sembarangan
-- **Companion object factory method** `from(parent: ViewGroup)` — ViewHolder diinisialisasi melalui factory
+### 2. Multiple View Types
 
----
+Adapter ini bisa nampilin 3 jenis layout berbeda dalam satu RecyclerView:
 
-## 📊 Analisis Efisiensi: RecyclerView.Adapter vs ListAdapter
+- **HEADER** - buat judul section, background gelap, full width
+- **NUMBER_ITEM** - nampilin data populasi dengan format angka otomatis (pake BindingAdapter)
+- **COLOR_ITEM** - item dengan background warna-warni, pake custom BindingAdapter juga
 
-### RecyclerView.Adapter (Konvensional)
+Caranya tinggal override `getItemViewType()` terus balikin nilai sesuai tipe itemnya.
 
-```kotlin
-class OldAdapter : RecyclerView.Adapter<ViewHolder>() {
-    private var items: List<Item> = emptyList()
-    
-    fun updateData(newItems: List<Item>) {
-        items = newItems
-        notifyDataSetChanged() // ❌ BOROS: me-render ulang SEMUA item
-    }
-}
-```
+### 3. GridLayoutManager + SpanSizeLookup
 
-| Operasi | Jumlah Kalkulasi |
-|---------|-----------------|
-| 1 item berubah dari 16 item | 16 item di-render ulang |
-| 3 item berubah | 16 item di-render ulang |
-| Item dipindah posisi | 16 item di-render ulang |
-| **Total pemborosan** | **Semua item selalu di-render ulang** |
+RecyclerView pake GridLayoutManager dengan 3 kolom. Biar Headernya bisa full width, gw pake SpanSizeLookup:
 
-### ListAdapter (Implementasi)
+- HEADER -> span 3 (full baris)
+- NUMBER_ITEM -> span 1
+- COLOR_ITEM -> span 1
 
-```kotlin
-class NewAdapter : ListAdapter<Item, ViewHolder>(ItemDiffCallback) {
-    // Cukup panggil submitList(), DiffUtil menghitung sisanya
-}
-```
+Jadi layoutnya rapi, Headernya gak kepotong kolom.
 
-| Operasi | Jumlah Kalkulasi | Hemat vs Konvensional |
-|---------|-----------------|----------------------|
-| 1 item berubah dari 16 item | **1 item di-render** | 93.75% |
-| 3 item berubah | **3 item di-render** | 81.25% |
-| Item dipindah posisi | **2 item dianimasikan** | 87.50% |
-| **Total** | **Hanya item berubah yang diproses** | **Sangat efisien** |
+### 4. Custom BindingAdapter
 
-### Mengapa ListAdapter Lebih Unggul?
+Buat ngisi value dari XML langsung tanpa harus nulis kode binding di ViewHolder, gw bikin 2 BindingAdapter:
 
-1. **Background Thread Computation** — DiffUtil menjalankan kalkulasi perbedaan (`calculateDiff()`) di background thread, tidak memblokir UI thread
-2. **Minimum Updates** — Hanya item yang benar-benar berubah yang di-notify (`notifyItemChanged`, `notifyItemMoved`, `notifyItemInserted`, `notifyItemRemoved`)
-3. **Partial Binding** — ViewHolder yang tidak berubah tidak dipanggil `onBindViewHolder`-nya, menghemat CPU dan GPU
-4. **Animation Support** — Perubahan posisi otomatis dianimasikan oleh `RecyclerView` tanpa kode tambahan
+- `backgroundColorHex` - ngeset background color dari string hex langsung di XML layout, misal `app:backgroundColorHex="@{item.colorHex}"`
+- `formattedNumber` - ngeformat angka gede biar enak dibaca, misal 8.1M, 281K, 1.5M, dll
+
+### 5. ViewHolder Pattern
+
+ViewHolder dibuat pake constructor private terus factory method di companion object. Jadi cara bikin ViewHolder-nya lewat `ViewHolder.from(parent)` aja, lebih bersih dan gak bisa diinstansiasi sembarangan.
 
 ---
 
-## 🏗️ Struktur Proyek
+## Perbedaan RecyclerView.Adapter vs ListAdapter
+
+**RecyclerView.Adapter biasa:**
+Pas data berubah, kita panggil `notifyDataSetChanged()` dan BOOM — semua item ke-render ulang meskipun cuma 1 item yang nilainya berubah. Bayangin kalo itemnya ada 16, yang ke render ya 16 semua. Waste banget.
+
+**ListAdapter + DiffUtil:**
+Kita tinggal panggil `submitList()` trus DiffUtil otomatis ngehitung di background thread: item mana yang baru, mana yang berubah, mana yang dihapus, mana yang pindah posisi. Hasilnya cuma item-item yang beneran perlu di-update aja yang kena notify. Efisien pol.
+
+Contoh perbandingan dari 16 item:
+
+| Situasi | RecyclerView.Adapter | ListAdapter |
+|---------|---------------------|-------------|
+| 1 item berubah | 16 item di-render ulang | 1 item doang |
+| 3 item berubah | 16 item di-render ulang | 3 item doang |
+| Item diacak | 16 item di-render ulang | 2 item dianimasikan |
+
+Jelas banget selisihnya. Di aplikasi realtime kayak chat atau feed sosial yang datanya sering berubah, pake ListAdapter tuh pengaruh banget ke performa apalagi kalo listnya panjang.
+
+---
+
+## Struktur File
 
 ```
 app/src/main/java/com/example/tugas10/
-├── MainActivity.kt              # Activity + GridLayoutManager + SpanSizeLookup
-├── MainViewModel.kt             # ViewModel dengan data generator
+├── MainActivity.kt
+├── MainViewModel.kt
 ├── model/
-│   └── DisplayItem.kt           # Data class + ItemType enum
+│   └── DisplayItem.kt
 └── adapter/
-    ├── ItemAdapter.kt           # ListAdapter dengan multiple view types
-    ├── ItemDiffCallback.kt      # DiffUtil.ItemCallback
-    ├── ViewHolders.kt           # 3 ViewHolder (companion object factory)
-    └── BindingAdapters.kt       # Custom @BindingAdapter
+    ├── ItemAdapter.kt
+    ├── ItemDiffCallback.kt
+    ├── ViewHolders.kt
+    └── BindingAdapters.kt
 
 app/src/main/res/layout/
-├── activity_main.xml            # Layout utama dengan RecyclerView
-├── item_header.xml              # Layout Header (span=3)
-├── item_number.xml              # Layout NumberItem (span=1)
-└── item_color.xml               # Layout ColorItem (span=1, custom binding)
+├── activity_main.xml
+├── item_header.xml
+├── item_number.xml
+└── item_color.xml
 ```
 
 ---
 
-## 🔗 Tautan Repository
+## Link Repository
 
 **[github.com/FarrelGhozy/Tugas10_Android_AdvancedRV_452024611053](https://github.com/FarrelGhozy/Tugas10_Android_AdvancedRV_452024611053)**
 
 ---
 
-## 📝 Catatan
+## Catatan
 
-- **Minimum SDK:** 26 (Android 8.0 Oreo)
-- **Target SDK:** 35 (Android 15)
-- **Kotlin:** 2.1.0
-- **Android Gradle Plugin:** 8.7.3
-- **Dependencies:** RecyclerView, CardView, Material3, Data Binding, ViewModel, LiveData
+- Min SDK: 26 (Android 8)
+- Target SDK: 35 (Android 15)
+- Pake Kotlin 2.1.0 + AGP 8.7.3
+- Dependencies: RecyclerView, CardView, Material3, Data Binding, ViewModel, LiveData
