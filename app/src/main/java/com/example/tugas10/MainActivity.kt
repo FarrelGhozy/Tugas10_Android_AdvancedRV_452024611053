@@ -1,10 +1,12 @@
 package com.example.tugas10
 
 import android.os.Bundle
-
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
@@ -38,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupObservers()
         setupButtons()
+        setupInsets()
     }
 
     private fun setupRecyclerView() {
@@ -88,6 +91,19 @@ class MainActivity : AppCompatActivity() {
         binding.btnShuffle.setOnClickListener {
             viewModel.shuffleData()
             Toast.makeText(this, "Items shuffled — only moved items re-render", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun setupInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val systemBars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars()
+            )
+            binding.toolbar.updatePadding(top = systemBars.top)
+            binding.bottomBar.updatePadding(
+                bottom = systemBars.bottom
+            )
+            insets
         }
     }
 }
